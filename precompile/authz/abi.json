@@ -1,0 +1,98 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IAuthz",
+  "sourceName": "solidity/precompiles/authz/IAuthz.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "grantee",
+          "type": "address"
+        },
+        {
+          "internalType": "string",
+          "name": "msgTypeUrl",
+          "type": "string"
+        },
+        {
+          "internalType": "int64",
+          "name": "expiration",
+          "type": "int64"
+        }
+      ],
+      "name": "grantGeneric",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "success",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "grantee",
+          "type": "address"
+        },
+        {
+          "internalType": "string[]",
+          "name": "allowedValidators",
+          "type": "string[]"
+        },
+        {
+          "internalType": "string",
+          "name": "authorizationType",
+          "type": "string"
+        },
+        {
+          "internalType": "int64",
+          "name": "expiration",
+          "type": "int64"
+        }
+      ],
+      "name": "grantStake",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "success",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "grantee",
+          "type": "address"
+        },
+        {
+          "internalType": "string",
+          "name": "msgTypeUrl",
+          "type": "string"
+        }
+      ],
+      "name": "revoke",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "success",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

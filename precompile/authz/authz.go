@@ -1,0 +1,134 @@
+// Copyright Tharsis Labs Ltd.(Evmos)
+// SPDX-License-Identifier:ENCL-1.0(https://github.com/evmos/evmos/blob/main/LICENSE)
+
+package authz
+
+import (
+	"embed"
+	"fmt"
+
+	cmn "github.com/cosmos/evm/precompiles/common"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+
+	"cosmossdk.io/core/address"
+	storetypes "cosmossdk.io/store/types"
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
+
+	"github.com/ethereum/go-ethereum/core/vm"
+)
+
+var _ vm.PrecompiledContract = &Precompile{}
+
+// Embed abi json file to the executable binary. Needed when importing as dependency.
+//
+//go:embed abi.json
+var f embed.FS
+
+// Precompile defines the authz precompile
+type Precompile struct {
+	cmn.Precompile
+	abi.ABI
+	codec.Codec
+	authzKeeper authzkeeper.Keeper
+	addrCodec   address.Codec
+}
+
+func LoadABI() (abi.ABI, error) {
+	return cmn.LoadABI(f, "abi.json")
+}
+
+// NewPrecompile creates a new authz Precompile instance implementing the
+// PrecompiledContract interface.
+func NewPrecompile(
+	cdc codec.Codec,
+	authzKeeper authzkeeper.Keeper,
+	addrCodec address.Codec,
+) (*Precompile, error) {
+	newABI, err := LoadABI()
+	if err != nil {
+		return nil, err
+	}
+
+	p := &Precompile{
+		Precompile: cmn.Precompile{
+			KvGasConfig:          storetypes.KVGasConfig(),
+			TransientKVGasConfig: storetypes.TransientGasConfig(),
+		},
+		ABI:         newABI,
+		Codec:       cdc,
+		authzKeeper: authzKeeper,
+		addrCodec:   addrCodec,
+	}
+
+	// SetAddress defines the address of the authz precompile contract.
+	p.SetAddress(common.HexToAddress(AuthzPrecompileAddress))
+
+	return p, nil
+}
+
+// RequiredGas calculates the precompiled contract's base gas rate.
+func (p Precompile) RequiredGas(input []byte) uint64 {
+	// NOTE: avoid panicking on short calldata. RequiredGas is invoked by the EVM
+	// (before Run) with raw, unpadded calldata; a call with < 4 bytes would slice
+	// out of range on input[:4]. Matches the upstream cosmos/evm precompiles.
+	if len(input) < 4 {
+		return 0
+	}
+
+	methodID := input[:4]
+
+	method, err := p.MethodById(methodID)
+	if err != nil {
+		// This should never happen since this method is going to fail during Run
+		return 0
+	}
+
+	return p.Precompile.RequiredGas(input, p.IsTransaction(method))
+}
+
+// Run executes the precompiled contract authz methods defined in the ABI.
+func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readOnly bool) (bz []byte, err error) {
+	return p.RunNativeAction(evm, contract, func(ctx sdk.Context) ([]byte, error) {
+		return p.Execute(ctx, contract, readOnly)
+	})
+}
+
+// Execute executes the precompiled contract authz methods defined in the ABI.
+func (p Precompile) Execute(ctx sdk.Context, contract *vm.Contract, readOnly bool) ([]byte, error) {
+	method, args, err := cmn.SetupABI(p.ABI, contract, readOnly, p.IsTransaction)
+	if err != nil {
+		return nil, err
+	}
+
+	var bz []byte
+	switch method.Name {
+	// Transactions
+	case GrantGenericMethod:
+		bz, err = p.GrantGenericEVM(ctx, contract.Caller(), method, args)
+	case GrantStakeMethod:
+		bz, err = p.GrantStakeEVM(ctx, contract.Caller(), method, args)
+	case RevokeMethod:
+		bz, err = p.RevokeEVM(ctx, contract.Caller(), method, args)
+	default:
+		// Unreachable: cmn.SetupABI rejects any method not in the ABI. Defense-in-depth.
+		return nil, fmt.Errorf("unknown method: %s", method.Name)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	return bz, err
+}
+
+func (Precompile) IsTransaction(method *abi.Method) bool {
+	switch method.Name {
+	case GrantGenericMethod, GrantStakeMethod, RevokeMethod:
+		return true
+	default:
+		return false
+	}
+}

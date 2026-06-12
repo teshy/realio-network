@@ -651,6 +651,7 @@ func New(
 			app.SlashingKeeper,
 			app.MultiStakingKeeper,
 			app.FeeGrantKeeper,
+			app.AuthzKeeper,
 			appCodec,
 			app.AccountKeeper.AddressCodec(),
 			authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ValidatorAddrPrefix()),

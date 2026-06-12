@@ -14,6 +14,7 @@ import (
 	feegrantkeeper "cosmossdk.io/x/feegrant/keeper"
 
 	"github.com/cosmos/cosmos-sdk/codec"
+	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	distributionkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
@@ -22,6 +23,7 @@ import (
 
 	precompiletypes "github.com/cosmos/evm/precompiles/types"
 	multistakingkeeper "github.com/realio-tech/multi-staking-module/x/multi-staking/keeper"
+	precompileAuthz "github.com/realiotech/realio-network/precompile/authz"
 	precompileFeeGrant "github.com/realiotech/realio-network/precompile/feegrant"
 	precompileMultiStaking "github.com/realiotech/realio-network/precompile/multistaking"
 )
@@ -41,6 +43,7 @@ func NewAvailableStaticPrecompiles(
 	slashingKeeper slashingkeeper.Keeper,
 	multiStakingKeeper multistakingkeeper.Keeper,
 	feegrantKeeper feegrantkeeper.Keeper,
+	authzKeeper authzkeeper.Keeper,
 	appCodec codec.Codec,
 	addrCodec address.Codec,
 	valAddrCodec address.Codec,
@@ -70,6 +73,13 @@ func NewAvailableStaticPrecompiles(
 	}
 
 	precompiles[feeGrantPrecompile.Address()] = feeGrantPrecompile
+
+	authzPrecompile, err := precompileAuthz.NewPrecompile(cdc, authzKeeper, addrCodec)
+	if err != nil {
+		panic(fmt.Errorf("failed to instantiate authz precompile: %w", err))
+	}
+
+	precompiles[authzPrecompile.Address()] = authzPrecompile
 
 	return precompiles
 }

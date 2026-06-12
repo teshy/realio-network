@@ -6,6 +6,7 @@ import (
 	testconstants "github.com/cosmos/evm/testutil/constants"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
+	precompileAuthz "github.com/realiotech/realio-network/precompile/authz"
 	precompileFeeGrant "github.com/realiotech/realio-network/precompile/feegrant"
 	precompileMultistaking "github.com/realiotech/realio-network/precompile/multistaking"
 )
@@ -29,6 +30,7 @@ func NewEVMGenesisState() *evmtypes.GenesisState {
 		append([]string{}, evmtypes.AvailableStaticPrecompiles...),
 		precompileMultistaking.MultistakingPrecompileAddress,
 		precompileFeeGrant.FeeGrantPrecompileAddress,
+		precompileAuthz.AuthzPrecompileAddress,
 	)
 
 	return evmGenState
